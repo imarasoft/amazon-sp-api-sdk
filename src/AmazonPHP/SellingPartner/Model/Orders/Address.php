@@ -288,7 +288,7 @@ class Address implements \ArrayAccess, \JsonSerializable, \Stringable, ModelInte
     /**
      * Gets name.
      */
-    public function getName() : string
+    public function getName() : ?string
     {
         return $this->container['name'];
     }
