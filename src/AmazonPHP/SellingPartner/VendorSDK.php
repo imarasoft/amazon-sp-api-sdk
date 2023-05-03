@@ -32,26 +32,16 @@ final class VendorSDK
      */
     private array $instances;
 
-    private ClientInterface $httpClient;
-
-    private Configuration $configuration;
-
-    private LoggerInterface $logger;
-
-    private HttpFactory $httpFactory;
+    private readonly HttpFactory $httpFactory;
 
     public function __construct(
-        ClientInterface $httpClient,
+        private readonly ClientInterface $httpClient,
         RequestFactoryInterface $requestFactory,
         StreamFactoryInterface $streamFactory,
-        Configuration $configuration,
-        LoggerInterface $logger
+        private readonly Configuration $configuration,
+        private readonly LoggerInterface $logger
     ) {
         $this->instances = [];
-
-        $this->httpClient     = $httpClient;
-        $this->configuration  = $configuration;
-        $this->logger         = $logger;
 
         $this->httpFactory = new HttpFactory($requestFactory, $streamFactory);
     }
@@ -118,7 +108,7 @@ final class VendorSDK
      *
      * @return T
      */
-    private function instantiateSDK(string $sdkClass) : object
+    private function instantiateSDK(string $sdkClass) : string|object
     {
         if (isset($this->instances[$sdkClass])) {
             return $this->instances[$sdkClass];

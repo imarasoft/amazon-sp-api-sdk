@@ -3,6 +3,7 @@
 namespace AmazonPHP\SellingPartner;
 
 use AmazonPHP\SellingPartner\Model\CatalogItem\ItemImage;
+use AmazonPHP\SellingPartner\Model\FulfillmentInbound\CurrencyCode;
 use AmazonPHP\SellingPartner\Model\FulfillmentInbound\PrepDetails;
 use AmazonPHP\SellingPartner\Model\FulfillmentInbound\PrepInstruction;
 use AmazonPHP\SellingPartner\Model\FulfillmentInbound\SellerFreightClass;
@@ -37,7 +38,7 @@ final class ObjectSerializer
      *
      * @return null|array|object|scalar serialized form of $data
      */
-    public static function sanitizeForSerialization($data, string $type = null, string $format = null)
+    public static function sanitizeForSerialization(mixed $data, string $type = null, string $format = null)
     {
         if (\is_scalar($data) || null === $data) {
             return $data;
@@ -73,7 +74,7 @@ final class ObjectSerializer
                             $allowedEnumTypes = $callable();
 
                             if (!\in_array($value->toString(), $allowedEnumTypes, true) &&
-                                !\in_array(\ltrim($openAPIType, '\\'), self::getBrokenModelDefinitions(), true)) {
+                                !\in_array(\ltrim((string) $openAPIType, '\\'), self::getBrokenModelDefinitions(), true)) {
                                 $imploded = \implode("', '", $allowedEnumTypes);
 
                                 throw new \InvalidArgumentException("Invalid value for enum '{$openAPIType}', must be one of: '{$imploded}'");
@@ -139,7 +140,7 @@ final class ObjectSerializer
      *
      * @return string the serialized object
      */
-    public static function toQueryValue($object) : string
+    public static function toQueryValue(\DateTime|string|array $object) : string
     {
         if (\is_array($object)) {
             return \implode(',', $object);
@@ -177,7 +178,7 @@ final class ObjectSerializer
      *
      * @return bool|string the form string
      */
-    public static function toFormValue($value)
+    public static function toFormValue(\SplFileObject|string $value) : bool|string
     {
         if ($value instanceof \SplFileObject) {
             return $value->getRealPath();
@@ -192,11 +193,11 @@ final class ObjectSerializer
      * If it's a datetime object, format it in ISO8601
      * If it's a boolean, convert it to "true" or "false".
      *
-     * @param bool|\DateTimeInterface|string $value the value of the parameter
+     * @param mixed $value the value of the parameter
      *
      * @return string the header string
      */
-    public static function toString($value) : string
+    public static function toString(mixed $value) : string
     {
         if ($value instanceof \DateTimeInterface) { // datetime in ISO8601 zulu format
             return $value->setTimezone(new \DateTimeZone('UTC'))->format(self::$dateTimeFormat);
@@ -219,7 +220,7 @@ final class ObjectSerializer
      *
      * @return null|string|void
      */
-    public static function serializeCollection(array $collection, string $style, bool $allowCollectionFormatMulti = false)
+    public static function serializeCollection(array $collection, string $style, bool $allowCollectionFormatMulti = false) : ?string
     {
         if ($allowCollectionFormatMulti && ('multi' === $style)) {
             // http_build_query() almost does the job for us. We just
@@ -227,37 +228,25 @@ final class ObjectSerializer
             return \preg_replace('/%5B[0-9]+%5D=/', '=', \http_build_query($collection, '', '&'));
         }
 
-        switch ($style) {
-            case 'pipeDelimited':
-            case 'pipes':
-                return \implode('|', $collection);
-
-            case 'tsv':
-                return \implode("\t", $collection);
-
-            case 'spaceDelimited':
-            case 'ssv':
-                return \implode(' ', $collection);
-
-            case 'simple':
-            case 'csv':
-                // Deliberate fall through. CSV is default format.
-            default:
-                return \implode(',', $collection);
-        }
+        return match ($style) {
+            'pipeDelimited', 'pipes' => \implode('|', $collection),
+            'tsv' => \implode("\t", $collection),
+            'spaceDelimited', 'ssv' => \implode(' ', $collection),
+            default => \implode(',', $collection),
+        };
     }
 
     /**
      * @psalm-template T
      * Deserialize a JSON string into an object.
      *
-     * @psalm-param mixed $data object or primitive to be deserialized
-     * @psalm-param T $class class name is passed as a string
-     * @psalm-param null|string[] $httpHeaders HTTP headers
+     * @param mixed $data object or primitive to be deserialized
+     * @param T $class class name is passed as a string
+     * @param null|string[] $httpHeaders HTTP headers
      *
      * @psalm-return T
      */
-    public static function deserialize(Configuration $configuration, $data, string $class, array $httpHeaders = null)
+    public static function deserialize(Configuration $configuration, mixed $data, string $class, array $httpHeaders = null)
     {
         if (null === $data) {
             return null;
@@ -308,12 +297,12 @@ final class ObjectSerializer
             if (!empty($data)) {
                 try {
                     return new \DateTimeImmutable($data);
-                } catch (\Exception $exception) {
+                } catch (\Exception) {
                     // Some API's return a date-time with too high nanosecond
                     // precision for php's DateTime to handle. This conversion
                     // (string -> unix timestamp -> DateTime) is a workaround
                     // for the problem.
-                    return (new \DateTimeImmutable())->setTimestamp(\strtotime($data));
+                    return (new \DateTimeImmutable())->setTimestamp(\strtotime((string) $data));
                 }
             } else {
                 return null;
@@ -355,7 +344,7 @@ final class ObjectSerializer
             $file = \fopen($filename, 'w');
 
             while ($chunk = $data->read(200)) {
-                \fwrite($file, $chunk);
+                \fwrite($file, (string) $chunk);
             }
             \fclose($file);
 
@@ -379,7 +368,7 @@ final class ObjectSerializer
 
         try {
             $data = \is_string($data) ? \json_decode($data, null, 512, JSON_THROW_ON_ERROR) : $data;
-        } catch (\JsonException $e) {
+        } catch (\JsonException) {
         }
 
         // If a discriminator is defined and points to a valid subclass, use it.
@@ -432,6 +421,7 @@ final class ObjectSerializer
         return [
             \ltrim(EventCode::class, '\\'),
             \ltrim(ItemImage::class, '\\'),
+            \ltrim(CurrencyCode::class, '\\'),
             \ltrim(AdditionalLocationInfo::class, '\\'),
             \ltrim(CurrentStatus::class, '\\'),
             \ltrim(FileType::class, '\\'),
@@ -478,7 +468,7 @@ final class ObjectSerializer
         }
 
         if (\is_a(PrepDetails::class, \substr($type, 0, -2), true)) {
-            $value = \array_filter($value, fn ($prepDetails) => \count((array) $prepDetails) > 0);
+            $value = \array_filter($value, fn ($prepDetails) : bool => \count((array) $prepDetails) > 0);
 
             return \count($value) > 0 ? $value : null;
         }

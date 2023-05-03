@@ -1,0 +1,14 @@
+generatorName: php
+templateDir: sp-api/resources/php-amazon-selling-partner-api
+additionalProperties:
+  invokerPackage: AmazonPHP\SellingPartner
+  srcBasePath: src/AmazonPHP/SellingPartner
+  modelPackage: Model\Uploads
+  packageName: Uploads
+files:
+  api.mustache:
+    templateType: API
+    destinationFilename: /UploadsSDK.php
+  api_interface.mustache:
+    templateType: API
+    destinationFilename: /UploadsSDKInterface.php

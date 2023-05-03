@@ -1,0 +1,14 @@
+generatorName: php
+templateDir: sp-api/resources/php-amazon-selling-partner-api
+additionalProperties:
+  invokerPackage: AmazonPHP\SellingPartner
+  srcBasePath: src/AmazonPHP/SellingPartner
+  modelPackage: Model\APlus
+  packageName: APlus
+files:
+  api.mustache:
+    templateType: API
+    destinationFilename: /APlusSDK.php
+  api_interface.mustache:
+    templateType: API
+    destinationFilename: /APlusSDKInterface.php
